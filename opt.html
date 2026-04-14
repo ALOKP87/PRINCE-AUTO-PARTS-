@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prince Auto Parts - OTP Login</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin:0;
+  font-family:Poppins;
+  background:linear-gradient(135deg,#0f172a,#020617);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:100vh;
+}
+
+/* CARD */
+.card {
+  width:90%;
+  max-width:380px;
+  padding:20px;
+  border-radius:20px;
+  background:rgba(255,255,255,0.05);
+  backdrop-filter: blur(10px);
+  box-shadow:0 10px 40px rgba(0,0,0,0.6);
+}
+
+/* HEADER */
+.title {
+  font-size:20px;
+  font-weight:600;
+  margin-bottom:10px;
+}
+
+.sub {
+  font-size:12px;
+  opacity:0.7;
+  margin-bottom:20px;
+}
+
+/* INPUT */
+input {
+  width:100%;
+  padding:12px;
+  margin:8px 0;
+  border:none;
+  border-radius:12px;
+  outline:none;
+}
+
+/* BUTTON */
+button {
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#6366f1;
+  color:white;
+  font-weight:500;
+  margin-top:10px;
+  cursor:pointer;
+}
+
+/* STATUS */
+#status {
+  margin-top:10px;
+  font-size:13px;
+}
+
+/* DEBUG */
+#debug {
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:200px;
+  background:black;
+  color:#00ff88;
+  font-size:12px;
+  overflow:auto;
+  display:none;
+  padding:10px;
+}
+
+.debug-btn {
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  background:#22c55e;
+  width:50px;
+  height:50px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:bold;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+  <div class="title">Prince Auto Parts</div>
+  <div class="sub">OTP Login - Warranty System</div>
+
+  <input id="phone" placeholder="+91XXXXXXXXXX">
+  <button onclick="sendOTP()">Send OTP</button>
+
+  <input id="otp" placeholder="Enter OTP">
+  <button onclick="verifyOTP()">Verify OTP</button>
+
+  <div id="recaptcha"></div>
+
+  <div id="status"></div>
+
+</div>
+
+<!-- DEBUG -->
+<div id="debug"></div>
+<div class="debug-btn" onclick="toggleDebug()">🐞</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="js/fb.js"></script>
+
+<script>
+
+// 🐞 DEBUG
+function log(msg){
+  const d = document.getElementById("debug");
+  d.innerHTML += msg + "<br>";
+}
+
+function toggleDebug(){
+  const d = document.getElementById("debug");
+  d.style.display = d.style.display === "none" ? "block":"none";
+}
+
+// 🔥 INIT RECAPTCHA
+window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha', {
+  size: 'normal'
+});
+
+// 🔥 SEND OTP
+function sendOTP() {
+  const phone = document.getElementById("phone").value;
+
+  log("Sending OTP to: " + phone);
+
+  firebase.auth().signInWithPhoneNumber(phone, window.recaptchaVerifier)
+    .then(res => {
+      window.confirmationResult = res;
+      document.getElementById("status").innerText = "OTP Sent ✅";
+      log("OTP Sent");
+    })
+    .catch(err => {
+      console.error(err);
+      document.getElementById("status").innerText = "Error ❌";
+      log(err.message);
+    });
+}
+
+// 🔥 VERIFY OTP
+function verifyOTP() {
+  const code = document.getElementById("otp").value;
+
+  log("Verifying OTP...");
+
+  confirmationResult.confirm(code)
+    .then(result => {
+      const user = result.user;
+
+      document.getElementById("status").innerText = "Login Success ✅";
+
+      log("Logged in: " + user.phoneNumber);
+
+      // 🔥 SAVE USER
+      firebase.database().ref("users/" + user.uid).set({
+        uid: user.uid,
+        phone: user.phoneNumber,
+        loginTime: Date.now()
+      });
+
+      // 🔥 REDIRECT
+      setTimeout(() => {
+        window.location.href = "index.html";
+      }, 1000);
+
+    })
+    .catch(err => {
+      document.getElementById("status").innerText = "Invalid OTP ❌";
+      log("Invalid OTP");
+    });
+}
+
+// 🔥 AUTO LOGIN
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    log("Already logged in");
+  }
+});
+
+</script>
+
+</body>
+</html>
